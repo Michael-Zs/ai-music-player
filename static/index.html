@@ -120,6 +120,16 @@ document.getElementById('query').addEventListener('keydown', e => {
   if (e.key === 'Enter') doSearch();
 });
 
+player.addEventListener('ended', () => {
+  const items = [...document.querySelectorAll('.track-item')];
+  const cur = document.getElementById('track-' + currentId);
+  const idx = items.indexOf(cur);
+  if (idx >= 0 && idx < items.length - 1) {
+    const nextId = items[idx + 1].id.replace('track-', '');
+    playTrack(Number(nextId));
+  }
+});
+
 async function doSearch() {
   const query = document.getElementById('query').value.trim();
   if (!query) return;
