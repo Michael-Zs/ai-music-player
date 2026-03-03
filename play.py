@@ -13,8 +13,10 @@ import music_db
 load_dotenv()
 
 client = Anthropic(
-    base_url="https://api.minimaxi.com/anthropic",
-    api_key=os.getenv("MINIMAX_API_KEY"),
+    # base_url="https://api.minimaxi.com/anthropic",
+    base_url = "https://api.qingyuntop.top/",
+    # api_key=os.getenv("MINIMAX_API_KEY"),
+    api_key=os.getenv("QINGYUN_API_KEY"),
 )
 
 SYSTEM_PROMPT = """你是一个音乐搜索助手。用户会描述想听的音乐风格、情绪或场景。
