@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AI 音乐</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f0f0f;
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    min-height: 100vh;
+    padding-bottom: 120px;
+  }
+  header {
+    background: #1a1a1a;
+    padding: 16px 20px;
+    border-bottom: 1px solid #2a2a2a;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  h1 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 12px; }
+  .search-row { display: flex; gap: 8px; }
+  input[type=text] {
+    flex: 1;
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 16px;
+    padding: 10px 14px;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  input[type=text]:focus { border-color: #5a5aff; }
+  button#search-btn {
+    background: #5a5aff;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 18px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button#search-btn:disabled { background: #333; color: #666; }
+  .status { padding: 12px 20px; font-size: 13px; color: #888; min-height: 36px; }
+  .track-list { padding: 0 12px; }
+  .track-item {
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .track-item:active { background: #222; }
+  .track-item.active { border-color: #5a5aff; background: #1c1c30; }
+  .play-icon {
+    width: 36px; height: 36px;
+    background: #2a2a2a;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+  .track-item.active .play-icon { background: #5a5aff; }
+  .track-info { flex: 1; min-width: 0; }
+  .track-title {
+    font-size: 15px; font-weight: 500; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .track-sub {
+    font-size: 12px; color: #888; margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .track-duration { font-size: 12px; color: #666; flex-shrink: 0; }
+  .player-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #1a1a1a;
+    border-top: 1px solid #2a2a2a;
+    padding: 10px 16px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  audio { width: 100%; height: 40px; }
+  .empty { text-align: center; color: #555; padding: 40px 20px; font-size: 15px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎵 AI 音乐</h1>
+  <div class="search-row">
+    <input type="text" id="query" placeholder="描述想听的音乐，如：安静的钢琴曲" />
+    <button id="search-btn" onclick="doSearch()">搜索</button>
+  </div>
+</header>
+
+<div class="status" id="status"></div>
+<div class="track-list" id="track-list">
+  <div class="empty">输入描述，搜索你想听的音乐</div>
+</div>
+
+<div class="player-bar">
+  <audio id="player" controls preload="none"></audio>
+</div>
+
+<script>
+const player = document.getElementById('player');
+let currentId = null;
+
+document.getElementById('query').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+async function doSearch() {
+  const query = document.getElementById('query').value.trim();
+  if (!query) return;
+
+  const btn = document.getElementById('search-btn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.textContent = 'AI 理解中...';
+  document.getElementById('track-list').innerHTML = '';
+
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query})
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || '搜索失败');
+    }
+    const data = await res.json();
+    status.textContent = `AI 理解：${data.search_text.slice(0, 60)}…`;
+    renderTracks(data.tracks);
+  } catch (e) {
+    status.textContent = '错误：' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function formatDuration(sec) {
+  if (!sec) return '';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function renderTracks(tracks) {
+  const list = document.getElementById('track-list');
+  if (!tracks.length) {
+    list.innerHTML = '<div class="empty">没有找到匹配的音乐</div>';
+    return;
+  }
+  list.innerHTML = tracks.map((t, i) => `
+    <div class="track-item" id="track-${t.id}" onclick="playTrack(${t.id})">
+      <div class="play-icon">${i + 1}</div>
+      <div class="track-info">
+        <div class="track-title">${esc(t.title)}</div>
+        <div class="track-sub">${esc(t.artist)}${t.album ? ' · ' + esc(t.album) : ''}</div>
+      </div>
+      <div class="track-duration">${formatDuration(t.duration_sec)}</div>
+    </div>
+  `).join('');
+}
+
+function playTrack(id) {
+  if (currentId) {
+    const prev = document.getElementById('track-' + currentId);
+    if (prev) {
+      prev.classList.remove('active');
+      const idx = [...document.querySelectorAll('.track-item')].indexOf(prev);
+      prev.querySelector('.play-icon').textContent = idx + 1;
+    }
+  }
+  currentId = id;
+  const item = document.getElementById('track-' + id);
+  if (item) { item.classList.add('active'); item.querySelector('.play-icon').textContent = '▶'; }
+  player.src = '/audio/' + id;
+  player.play().catch(() => {});
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
