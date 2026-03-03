@@ -5,11 +5,10 @@ import subprocess
 import music_db
 import embeddingdb
 
-PROMPT_TEMPLATE = """请用中英文混合，为这首音乐写一段描述（约100-200字），包含：
+PROMPT_TEMPLATE = """请用中文，为这首音乐写一段描述（约100-200字），包含：
 - 作曲家、时期、流派
 - 乐器编制
 - 情绪、氛围、风格特征
-- 适合的场景（如：学习、冥想、晚餐、散步等）
 
 请用网络搜索获取准确信息。只输出描述文本，不要其他内容。
 
