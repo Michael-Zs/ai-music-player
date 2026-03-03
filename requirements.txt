@@ -1,0 +1,21 @@
+# AI 音乐搜索与播放系统依赖
+
+# 音频元数据解析
+mutagen
+
+# 向量数据库
+chromadb
+
+# HTTP 请求（embedding API）
+requests
+
+# Anthropic SDK（查询改写）
+anthropic
+
+# 环境变量管理
+python-dotenv
+
+# Web 界面
+fastapi
+uvicorn[standard]
+aiofiles
