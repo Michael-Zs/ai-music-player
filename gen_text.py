@@ -1,8 +1,9 @@
-"""用 AI 为每首曲目生成描述文本，用于后续 embedding 搜索。"""
+"""用 AI 为每首曲目生成描述文本，然后 embedding 存入向量数据库。"""
 
 import sqlite3
 import subprocess
 import music_db
+import embeddingdb
 
 PROMPT_TEMPLATE = """请用中英文混合，为这首音乐写一段描述（约100-200字），包含：
 - 作曲家、时期、流派
@@ -27,9 +28,13 @@ def generate_text(filename: str) -> str:
 if __name__ == "__main__":
     conn = sqlite3.connect("music.db")
     music_db.init_db(conn)
+    col = embeddingdb.get_or_create_collection("tracks")
 
     tracks = music_db.get_all(conn)
     total = len(tracks)
+
+    updated_ids = []
+    updated_texts = []
 
     for i, track in enumerate(tracks, 1):
         if track.embedding_text and not track.embedding_text.startswith(track.title or ""):
@@ -43,9 +48,17 @@ if __name__ == "__main__":
         if text:
             music_db.update_embedding_text(conn, track.id, text)
             conn.commit()
+            updated_ids.append(str(track.id))
+            updated_texts.append(text)
             print(f"  -> {text[:80]}...")
         else:
             print(f"  -> 生成失败，跳过")
+
+    # 将新生成的文本 embedding 存入向量数据库
+    if updated_ids:
+        print(f"\n正在 embedding {len(updated_ids)} 条文本...")
+        embeddingdb.add_texts(col, updated_ids, updated_texts)
+        print(f"向量数据库已更新，共 {col.count()} 条向量")
 
     conn.close()
     print("\n完成")

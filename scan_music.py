@@ -25,7 +25,7 @@ if __name__ == "__main__":
         print(f"[{track.id}] {text}")
     conn.commit()
 
-    embeddingdb.add_texts(col, ids, texts)
+    # embeddingdb.add_texts(col, ids, texts)
     print(f"\n向量数据库已更新，共 {col.count()} 条向量")
 
     conn.close()
