@@ -4,6 +4,7 @@ import sqlite3
 import subprocess
 import music_db
 import embeddingdb
+import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 PROMPT_TEMPLATE = """请用中文，为这首音乐写一段描述（约100-200字），包含：
@@ -25,9 +26,9 @@ def generate_text(filename: str) -> tuple[str, str]:
     return (filename, result.stdout.strip())
 
 
-def process_track(track, total, idx):
+def process_track(track, total, idx, force=False):
     """处理单个 track，返回 (track_id, text) 或 None"""
-    if track.embedding_text and not track.embedding_text.startswith(track.title or ""):
+    if not force and track.embedding_text and not track.embedding_text.startswith(track.title or ""):
         print(f"[{idx}/{total}] 跳过（已有）: {track.title}")
         return None
 
@@ -48,6 +49,11 @@ def process_track(track, total, idx):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true", help="强制重新生成所有文本")
+    args = parser.parse_args()
+
+
     conn = sqlite3.connect("music.db")
     music_db.init_db(conn)
     col = embeddingdb.get_or_create_collection("tracks")
@@ -56,9 +62,11 @@ if __name__ == "__main__":
     total = len(tracks)
 
     # 收集需要处理的 track
+    if args.force:
+        pending = tracks
     pending = [
         track for i, track in enumerate(tracks, 1)
-        if not (track.embedding_text and not track.embedding_text.startswith(track.title or ""))
+        if not (track.embedding_text and not track.embedding_text.startswith(""))
     ]
 
     results = []
@@ -66,7 +74,7 @@ if __name__ == "__main__":
     # 5 个并行
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {
-            executor.submit(process_track, track, len(pending), i): track
+            executor.submit(process_track, track, len(pending), i, args.force): track
             for i, track in enumerate(pending, 1)
         }
         for future in as_completed(futures):
