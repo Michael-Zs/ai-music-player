@@ -3,3 +3,4 @@ chroma_data/
 music/
 *.db
 *.db-journal
+.env
