@@ -57,6 +57,7 @@ def get_embedding(
         },
         json={"model": model, "input": input_text},
         timeout=30,
+        verify=False,
     )
     resp.raise_for_status()
     body = resp.json()

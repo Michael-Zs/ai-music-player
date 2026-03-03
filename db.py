@@ -45,12 +45,12 @@ if __name__ == "__main__":
 
     # 添加测试数据
     print("=== 添加文本 ===")
-    add_texts(col, ["1", "2", "3"], ["吉他是一种弦乐器", "钢琴有88个键", "鼓是打击乐器"])
+    add_texts(col, ["1", "2", "3", "4"], ["吉他是一种弦乐器", "钢琴有88个键", "鼓是打击乐器","小提琴的琴弓是用马毛做的"])
     print(f"集合文档数: {col.count()}")
 
     # 查询
     print("\n=== 查询: '弦乐器有哪些' ===")
-    results = query(col, "弦乐器有哪些", n_results=2)
+    results = query(col, "弦乐器有哪些", n_results=4)
     for i, (id_, dist) in enumerate(zip(results["ids"][0], results["distances"][0])):
         print(f"  {i+1}. id={id_} (距离: {dist:.4f})")
 
