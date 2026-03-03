@@ -27,6 +27,7 @@ class Track:
     artist: str | None
     album: str | None
     duration_sec: float | None
+    embedding_text: str | None
     created_at: str
     updated_at: str
 
@@ -52,14 +53,17 @@ def init_db(conn: sqlite3.Connection):
             artist TEXT,
             album TEXT,
             duration_sec REAL,
+            embedding_text TEXT,
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         )
     """)
     conn.commit()
-
-
-# ── 写入 ──
+    # 迁移：为旧表添加 embedding_text 列
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(tracks)").fetchall()}
+    if "embedding_text" not in cols:
+        conn.execute("ALTER TABLE tracks ADD COLUMN embedding_text TEXT")
+        conn.commit()
 
 def _extract_meta(filepath: str) -> dict | None:
     audio = MutagenFile(filepath, easy=True)
@@ -143,3 +147,11 @@ def delete(conn: sqlite3.Connection, track_id: int) -> bool:
     cur = conn.execute("DELETE FROM tracks WHERE id = ?", (track_id,))
     conn.commit()
     return cur.rowcount > 0
+
+
+def update_embedding_text(conn: sqlite3.Connection, track_id: int, text: str):
+    """更新单条曲目的 embedding_text。"""
+    conn.execute(
+        "UPDATE tracks SET embedding_text = ?, updated_at = datetime('now') WHERE id = ?",
+        (text, track_id),
+    )
