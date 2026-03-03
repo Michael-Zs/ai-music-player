@@ -15,13 +15,13 @@ from play import chat
 
 load_dotenv()
 
-DB_PATH = "music.db"
+DB_PATH = Path(__file__).parent / "music.db"
 STATIC_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    app.state.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     music_db.init_db(app.state.conn)
     app.state.col = embeddingdb.get_or_create_collection("tracks")
     yield
@@ -44,11 +44,14 @@ async def index():
 
 @app.post("/api/search")
 async def search(req: SearchRequest):
-    if not os.getenv("MINIMAX_API_KEY"):
-        raise HTTPException(status_code=500, detail="未配置 MINIMAX_API_KEY")
+    if not os.getenv("QINGYUN_API_KEY"):
+        raise HTTPException(status_code=500, detail="未配置 QINGYUN_API_KEY")
 
-    search_text = chat(req.query)
-    results = embeddingdb.query(app.state.col, search_text, n_results=req.n_results)
+    try:
+        search_text = chat(req.query)
+        results = embeddingdb.query(app.state.col, search_text, n_results=req.n_results)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"搜索失败: {e}")
     ids = results["ids"][0]
     distances = results["distances"][0]
 
