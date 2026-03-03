@@ -1,21 +1,21 @@
 # AI 音乐搜索与播放系统依赖
 
 # 音频元数据解析
-mutagen
+mutagen==1.47.0
 
 # 向量数据库
-chromadb
+chromadb==1.5.2
 
 # HTTP 请求（embedding API）
-requests
+requests==2.32.5
 
 # Anthropic SDK（查询改写）
-anthropic
+anthropic==0.79.0
 
 # 环境变量管理
-python-dotenv
+python-dotenv==1.2.1
 
 # Web 界面
-fastapi
-uvicorn[standard]
-aiofiles
+fastapi==0.133.1
+uvicorn[standard]==0.40.0
+aiofiles==25.1.0
