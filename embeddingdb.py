@@ -23,7 +23,7 @@ def add_texts(collection: chromadb.Collection, ids: list[str], texts: list[str])
     """将文本列表转为 embedding 后存入集合，只保存 id 和向量"""
     result = get_embedding(texts)
     embeddings = [item.embedding for item in result.data]
-    collection.add(ids=ids, embeddings=embeddings)
+    collection.upsert(ids=ids, embeddings=embeddings)
 
 
 def query(

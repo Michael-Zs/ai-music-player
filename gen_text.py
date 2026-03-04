@@ -64,12 +64,27 @@ if __name__ == "__main__":
     # 收集需要处理的 track
     if args.force:
         pending = tracks
-    pending = [
-        track for i, track in enumerate(tracks, 1)
-        if not (track.embedding_text and not track.embedding_text.startswith(""))
-    ]
+    else:
+        pending = [
+            track for track in tracks
+            if not (track.embedding_text and not track.embedding_text.startswith(""))
+        ]
 
-    results = []
+    batch_ids = []
+    batch_texts = []
+    BATCH_SIZE = 10
+
+    def flush_batch():
+        if not batch_ids:
+            return
+        for track_id, text in zip(batch_ids, batch_texts):
+            music_db.update_embedding_text(conn, int(track_id), text)
+        conn.commit()
+        print(f"\n已写入数据库 {len(batch_ids)} 条，正在 embedding...")
+        embeddingdb.add_texts(col, batch_ids[:], batch_texts[:])
+        print(f"向量数据库已更新，共 {col.count()} 条向量")
+        batch_ids.clear()
+        batch_texts.clear()
 
     # 5 个并行
     with ThreadPoolExecutor(max_workers=5) as executor:
@@ -80,25 +95,14 @@ if __name__ == "__main__":
         for future in as_completed(futures):
             result = future.result()
             if result:
-                results.append(result)
+                track_id, text = result
+                batch_ids.append(str(track_id))
+                batch_texts.append(text)
+                if len(batch_ids) >= BATCH_SIZE:
+                    flush_batch()
 
-    # 批量更新数据库
-    updated_ids = []
-    updated_texts = []
-    for track_id, text in results:
-        music_db.update_embedding_text(conn, track_id, text)
-        updated_ids.append(str(track_id))
-        updated_texts.append(text)
-
-    if updated_ids:
-        conn.commit()
-        print(f"\n已更新 {len(updated_ids)} 条记录到数据库")
-
-    # 将新生成的文本 embedding 存入向量数据库
-    if updated_ids:
-        print(f"正在 embedding {len(updated_ids)} 条文本...")
-        embeddingdb.add_texts(col, updated_ids, updated_texts)
-        print(f"向量数据库已更新，共 {col.count()} 条向量")
+    # 处理剩余不足 10 条的
+    flush_batch()
 
     conn.close()
     print("\n完成")
