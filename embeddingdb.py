@@ -38,6 +38,10 @@ def query(
         n_results=n_results,
     )
 
+def clear_collection(collection: chromadb.Collection):
+    """清空集合中的所有数据"""
+    collection.delete(ids=collection.get(ids=[]).ids)  # 获取所有 id 后删除
+
 
 if __name__ == "__main__":
     client = get_client()
