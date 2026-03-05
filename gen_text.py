@@ -21,7 +21,8 @@ DEBUG=False
 def generate_text(filename: str) -> tuple[str, str]:
     """返回 (filename, text) 元组"""
     prompt = PROMPT_TEMPLATE.format(filename=filename)
-    exec = ["cr","m", "-p", prompt, "--allowedTools", "mcp__MiniMax__web_search"]
+    # exec = ["cr","m", "-p", prompt, "--allowedTools", "mcp__MiniMax__web_search"]
+    exec = ["claude", "-p", prompt, "--allowedTools", "mcp__MiniMax__web_search"]
 
     if DEBUG:
         exec = ["echo", f"模拟生成的文本 for {filename}，包含作曲家、时期、流派等信息。"]
