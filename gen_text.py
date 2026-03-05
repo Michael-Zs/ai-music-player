@@ -87,7 +87,7 @@ if __name__ == "__main__":
           print(f"   路径: {track.path}")
           print(f"   时长: {track.duration_sec}s")
           if track.embedding_text:
-              print(f"   描述: {track.embedding_text[:100]}...")
+              print(f"   描述: {track.embedding_text}")
           print()
         exit()
 
