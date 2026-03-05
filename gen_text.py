@@ -61,20 +61,36 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="强制重新生成所有文本")
     parser.add_argument("--clear", action="store_true", help="clear chromadb")
+    parser.add_argument("--list", action="store_true", help="list embedding texts")
     args = parser.parse_args()
 
     if args.clear:
         print("正在清空 chromadb 数据库...")
         embeddingdb.clear_collection("tracks")
         print("已清空 chromadb 数据库")
+        exit()
 
 
     conn = sqlite3.connect("music.db")
     music_db.init_db(conn)
     col = embeddingdb.get_or_create_collection("tracks")
 
+
     tracks = music_db.get_all(conn)
     total = len(tracks)
+
+
+    if args.list:
+        print("正在列出所有 track 的 embedding_text...")
+        for track in tracks:
+          print(f"{track.title} - {track.artist} ({track.album})")
+          print(f"   路径: {track.path}")
+          print(f"   时长: {track.duration_sec}s")
+          if track.embedding_text:
+              print(f"   描述: {track.embedding_text[:100]}...")
+          print()
+        exit()
+
 
     # 收集需要处理的 track
     if args.force:
