@@ -94,6 +94,59 @@
   }
   .rank-badge.changed { background: #3a3a00; color: #ffcc00; }
   .track-duration { font-size: 12px; color: #666; flex-shrink: 0; }
+  .menu-btn {
+    width: 32px; height: 32px;
+    background: #2a2a2a;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+    color: #888;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  .menu-btn:hover { background: #3a3a3a; color: #fff; }
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal.show { display: flex; }
+  .modal-content {
+    background: #1a1a1a;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .modal-title { font-size: 18px; font-weight: 600; }
+  .close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+  }
+  .close-btn:hover { color: #fff; }
+  .info-row { margin-bottom: 12px; }
+  .info-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .info-value { font-size: 14px; color: #e0e0e0; white-space: pre-wrap; word-break: break-word; }
   .player-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: #1a1a1a;
@@ -121,6 +174,16 @@
 
 <div class="player-bar">
   <audio id="player" controls preload="none"></audio>
+</div>
+
+<div class="modal" id="info-modal" onclick="if(event.target===this) closeModal()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">曲目信息</div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
 </div>
 
 <script>
@@ -194,14 +257,15 @@ function renderTracks(tracks) {
         <span class="rank-badge${t.vector_rank !== t.rerank_rank ? ' changed' : ''}">向量: #${t.vector_rank}</span>
       </div>` : '';
     return `
-    <div class="track-item" id="track-${t.id}" onclick="playTrack(${t.id})">
-      <div class="play-icon">${i + 1}</div>
-      <div class="track-info">
+    <div class="track-item" id="track-${t.id}">
+      <div class="play-icon" onclick="playTrack(${t.id})">${i + 1}</div>
+      <div class="track-info" onclick="playTrack(${t.id})">
         <div class="track-title">${esc(t.title)}</div>
         <div class="track-sub">${esc(t.artist)}${t.album ? ' · ' + esc(t.album) : ''}</div>
         ${rankInfo}
       </div>
-      <div class="track-duration">${formatDuration(t.duration_sec)}</div>
+      <div class="track-duration" onclick="playTrack(${t.id})">${formatDuration(t.duration_sec)}</div>
+      <div class="menu-btn" onclick="event.stopPropagation(); showInfo(${t.id})">⋯</div>
     </div>
   `;
   }).join('');
@@ -228,6 +292,48 @@ function playTrack(id) {
 function esc(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function showInfo(id) {
+  const modal = document.getElementById('info-modal');
+  const body = document.getElementById('modal-body');
+  body.innerHTML = '<div style="text-align:center;color:#888;">加载中...</div>';
+  modal.classList.add('show');
+
+  try {
+    const res = await fetch(`/api/track/${id}`);
+    if (!res.ok) throw new Error('获取失败');
+    const track = await res.json();
+
+    body.innerHTML = `
+      <div class="info-row">
+        <div class="info-label">标题</div>
+        <div class="info-value">${esc(track.title || '未知')}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">艺术家</div>
+        <div class="info-value">${esc(track.artist || '未知')}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">专辑</div>
+        <div class="info-value">${esc(track.album || '未知')}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">文件路径</div>
+        <div class="info-value">${esc(track.path)}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">AI 描述</div>
+        <div class="info-value">${esc(track.embedding_text || '暂无')}</div>
+      </div>
+    `;
+  } catch (e) {
+    body.innerHTML = `<div style="color:#f88;">错误：${esc(e.message)}</div>`;
+  }
+}
+
+function closeModal() {
+  document.getElementById('info-modal').classList.remove('show');
 }
 </script>
 </body>

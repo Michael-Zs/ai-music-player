@@ -74,6 +74,22 @@ async def search(req: SearchRequest):
     return {"query": req.query, "search_text": search_text, "tracks": tracks}
 
 
+@app.get("/api/track/{track_id}")
+async def get_track(track_id: int):
+    track = music_db.get(app.state.conn, track_id)
+    if not track:
+        raise HTTPException(status_code=404, detail="曲目不存在")
+    return {
+        "id": track.id,
+        "path": track.path,
+        "title": track.title,
+        "artist": track.artist,
+        "album": track.album,
+        "duration_sec": track.duration_sec,
+        "embedding_text": track.embedding_text,
+    }
+
+
 @app.get("/audio/{track_id}")
 async def audio(track_id: int):
     track = music_db.get(app.state.conn, track_id)
