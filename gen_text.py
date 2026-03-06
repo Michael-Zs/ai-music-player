@@ -63,18 +63,18 @@ if __name__ == "__main__":
     parser.add_argument("--force", action="store_true", help="强制重新生成所有文本")
     parser.add_argument("--clear", action="store_true", help="clear chromadb")
     parser.add_argument("--list", action="store_true", help="list embedding texts")
+    parser.add_argument("--reembedding", action="store_true", help="reembedding texts")
     args = parser.parse_args()
-
-    if args.clear:
-        print("正在清空 chromadb 数据库...")
-        embeddingdb.clear_collection("tracks")
-        print("已清空 chromadb 数据库")
-        exit()
-
 
     conn = sqlite3.connect("music.db")
     music_db.init_db(conn)
     col = embeddingdb.get_or_create_collection("tracks")
+
+    if args.clear:
+        print("正在清空 chromadb 数据库...")
+        embeddingdb.clear_collection(col)
+        print("已清空 chromadb 数据库")
+        exit()
 
 
     tracks = music_db.get_all(conn)
@@ -90,6 +90,32 @@ if __name__ == "__main__":
           if track.embedding_text:
               print(f"   描述: {track.embedding_text}")
           print()
+        exit()
+
+    if args.reembedding:
+        embeddingdb.delete_collection("tracks")
+        col = embeddingdb.get_or_create_collection("tracks")
+
+        batch_size = 10
+        batch_ids = []
+        batch_texts = []
+
+        def flush_batch():
+            if batch_ids:
+                embeddingdb.add_texts(col, batch_ids, batch_texts)
+                print(f"已 re-embedding {len(batch_ids)} 条")
+                batch_ids.clear()
+                batch_texts.clear()
+
+        for track in tracks:
+            if track.embedding_text:
+                batch_ids.append(str(track.id))
+                batch_texts.append(track.embedding_text)
+                if len(batch_ids) >= batch_size:
+                    flush_batch()
+
+        flush_batch()
+        print("完成 re-embedding")
         exit()
 
 

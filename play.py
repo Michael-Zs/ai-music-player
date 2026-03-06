@@ -13,9 +13,7 @@ import music_db
 load_dotenv()
 
 client = Anthropic(
-    # base_url="https://api.minimaxi.com/anthropic",
     base_url = "https://api.qingyuntop.top/",
-    # api_key=os.getenv("MINIMAX_API_KEY"),
     api_key=os.getenv("QINGYUN_API_KEY"),
 )
 
