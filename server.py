@@ -54,9 +54,10 @@ async def search(req: SearchRequest):
         raise HTTPException(status_code=500, detail=f"搜索失败: {e}")
     ids = results["ids"][0]
     distances = results["distances"][0]
+    metadatas = results.get("metadatas", [{}] * len(ids))
 
     tracks = []
-    for tid, dist in zip(ids, distances):
+    for i, (tid, dist, meta) in enumerate(zip(ids, distances, metadatas)):
         track = music_db.get(app.state.conn, int(tid))
         if track:
             tracks.append({
@@ -65,7 +66,9 @@ async def search(req: SearchRequest):
                 "artist": track.artist or "未知艺术家",
                 "album": track.album or "",
                 "duration_sec": track.duration_sec,
-                "score": round(1 - dist, 4),
+                "score": round(dist, 4),
+                "rerank_rank": i + 1,
+                "vector_rank": meta.get("original_rank") if isinstance(meta, dict) else None,
             })
 
     return {"query": req.query, "search_text": search_text, "tracks": tracks}

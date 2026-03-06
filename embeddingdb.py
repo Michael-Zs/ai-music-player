@@ -64,15 +64,17 @@ def query(
         for i, r in enumerate(rerank_result.results):
             print(f"  {i+1}. id={ids[r.index]} score={r.relevance_score:.4f} - {docs[r.index][:50]}...")
 
-    # 按 rerank 结果重新组织返回数据
+    # 按 rerank 结果重新组织返回数据，保留原始排名信息
     reranked_ids = [ids[r.index] for r in rerank_result.results]
     reranked_docs = [docs[r.index] for r in rerank_result.results]
     reranked_scores = [r.relevance_score for r in rerank_result.results]
+    original_ranks = [r.index + 1 for r in rerank_result.results]  # 原始排名（1-based）
 
     return {
         "ids": [reranked_ids],
         "documents": [reranked_docs],
         "distances": [reranked_scores],
+        "metadatas": [{"original_rank": rank} for rank in original_ranks],
     }
 
 def clear_collection(collection: chromadb.Collection):

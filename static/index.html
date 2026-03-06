@@ -82,6 +82,17 @@
     font-size: 12px; color: #888; margin-top: 3px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .track-ranks {
+    font-size: 11px; color: #666; margin-top: 2px;
+  }
+  .rank-badge {
+    display: inline-block;
+    background: #2a2a2a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+  }
+  .rank-badge.changed { background: #3a3a00; color: #ffcc00; }
   .track-duration { font-size: 12px; color: #666; flex-shrink: 0; }
   .player-bar {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -176,16 +187,24 @@ function renderTracks(tracks) {
     list.innerHTML = '<div class="empty">没有找到匹配的音乐</div>';
     return;
   }
-  list.innerHTML = tracks.map((t, i) => `
+  list.innerHTML = tracks.map((t, i) => {
+    const rankInfo = t.vector_rank ?
+      `<div class="track-ranks">
+        <span class="rank-badge">Rerank: #${t.rerank_rank}</span>
+        <span class="rank-badge${t.vector_rank !== t.rerank_rank ? ' changed' : ''}">向量: #${t.vector_rank}</span>
+      </div>` : '';
+    return `
     <div class="track-item" id="track-${t.id}" onclick="playTrack(${t.id})">
       <div class="play-icon">${i + 1}</div>
       <div class="track-info">
         <div class="track-title">${esc(t.title)}</div>
         <div class="track-sub">${esc(t.artist)}${t.album ? ' · ' + esc(t.album) : ''}</div>
+        ${rankInfo}
       </div>
       <div class="track-duration">${formatDuration(t.duration_sec)}</div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function playTrack(id) {
