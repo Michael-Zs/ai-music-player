@@ -21,6 +21,15 @@ body {
     cursor: pointer;
 }
 
+#music-info {
+    color: #fff;
+    margin-left: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
 #viewer {
     margin-top: 60px;
     height: calc(100vh - 60px);

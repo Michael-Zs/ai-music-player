@@ -65,3 +65,42 @@ async function getTextFromLocation(wordLimit = 1000) {
 
     return text.trim();
 }
+
+let musicEnabled = false;
+const audioPlayer = document.getElementById('audio-player');
+const musicInfo = document.getElementById('music-info');
+
+document.getElementById('music-toggle').addEventListener('click', () => {
+    musicEnabled = !musicEnabled;
+    document.getElementById('music-toggle').textContent = musicEnabled ? '🎵 关闭背景音乐' : '🎵 开启背景音乐';
+    if (musicEnabled) playNextMusic();
+    else audioPlayer.pause();
+});
+
+audioPlayer.addEventListener('ended', () => {
+    if (musicEnabled) playNextMusic();
+});
+
+async function playNextMusic() {
+    const text = await getTextFromLocation(1000);
+    if (!text) {
+        musicInfo.textContent = '无法获取文本';
+        return;
+    }
+
+    musicInfo.textContent = '正在查找音乐...';
+    try {
+        const res = await fetch('http://localhost:8080/api/music-for-reading', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text})
+        });
+        const data = await res.json();
+        audioPlayer.src = data.audio_url;
+        audioPlayer.play();
+        musicInfo.textContent = `♪ ${data.title} - ${data.artist}`;
+    } catch (e) {
+        musicInfo.textContent = '音乐加载失败';
+        console.error(e);
+    }
+}
