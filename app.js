@@ -24,7 +24,13 @@ document.getElementById('file-input').addEventListener('change', (e) => {
 
         rendition.on('relocated', (location) => {
             window.currentLocation = location;
+            localStorage.setItem('epub-location', location.start.cfi);
         });
+
+        const savedLocation = localStorage.getItem('epub-location');
+        if (savedLocation) {
+            rendition.display(savedLocation);
+        }
     };
     reader.readAsArrayBuffer(file);
 });
@@ -44,31 +50,49 @@ document.getElementById('font-size').addEventListener('input', (e) => {
 });
 
 async function getTextFromLocation(wordLimit = 1000) {
-    if (!book || !window.currentLocation) return '';
+    if (!rendition || !window.currentLocation) return '';
 
-    let text = '';
-    let wordCount = 0;
-    const startIndex = book.spine.spineItems.findIndex(item =>
-        item.href === window.currentLocation.start.href
-    );
+    try {
+        const range = await rendition.getRange(window.currentLocation.start.cfi);
+        const contents = rendition.getContents()[0];
+        if (!contents) return '';
 
-    for (let i = startIndex; i < book.spine.length && wordCount < wordLimit; i++) {
-        const item = book.spine.get(i);
-        await item.load(book.load.bind(book));
+        const startNode = range.startContainer;
+        let text = '';
+        let wordCount = 0;
 
-        const bodyText = item.document.body.textContent.trim();
-        const words = bodyText.split(/\s+/);
-        const remaining = wordLimit - wordCount;
-        text += words.slice(0, remaining).join(' ') + ' ';
-        wordCount += Math.min(words.length, remaining);
+        function extractText(node) {
+            if (wordCount >= wordLimit) return;
+            if (node.nodeType === Node.TEXT_NODE) {
+                const words = node.textContent.split(/\s+/).filter(w => w);
+                const remaining = wordLimit - wordCount;
+                text += words.slice(0, remaining).join(' ') + ' ';
+                wordCount += Math.min(words.length, remaining);
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                for (let child of node.childNodes) {
+                    extractText(child);
+                    if (wordCount >= wordLimit) break;
+                }
+            }
+        }
+
+        let current = startNode;
+        while (current && wordCount < wordLimit) {
+            extractText(current);
+            current = current.nextSibling || current.parentNode?.nextSibling;
+        }
+
+        return text.trim();
+    } catch (e) {
+        console.error('提取文本失败:', e);
+        return '';
     }
-
-    return text.trim();
 }
 
 let musicEnabled = false;
 const audioPlayer = document.getElementById('audio-player');
 const musicInfo = document.getElementById('music-info');
+const playedSongs = [];
 
 document.getElementById('music-toggle').addEventListener('click', () => {
     musicEnabled = !musicEnabled;
@@ -93,12 +117,16 @@ async function playNextMusic() {
         const res = await fetch('http://localhost:8080/api/music-for-reading', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({text})
+            body: JSON.stringify({text, exclude_ids: playedSongs})
         });
         const data = await res.json();
         audioPlayer.src = data.audio_url;
         audioPlayer.play();
         musicInfo.textContent = `♪ ${data.title} - ${data.artist}`;
+
+        playedSongs.push(data.track_id);
+        if (playedSongs.length > 20) playedSongs.shift();
+        console.log('已播放歌曲列表:', playedSongs);
     } catch (e) {
         musicInfo.textContent = '音乐加载失败';
         console.error(e);

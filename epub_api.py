@@ -40,6 +40,7 @@ app.add_middleware(
 
 class MusicRequest(BaseModel):
     text: str
+    exclude_ids: list[int] = []
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -64,11 +65,11 @@ async def music_for_reading(req: MusicRequest):
         raise HTTPException(status_code=500, detail="未配置 QINGYUN_API_KEY")
 
     try:
-        vibe = chat(f"根据以下文本内容，生成适合作为背景音乐的氛围描述：\n\n{req.text[:500]}")
+        vibe = chat(f"根据以下文本内容，生成适合作为背景音乐的氛围描述：\n\n{req.text}")
         print(f"用户输入: {req.text}...")
         print(f"生成的氛围描述: {vibe}")
-        results = embeddingdb.query(app.state.col, vibe, n_results=1)
-        
+        results = embeddingdb.query(app.state.col, vibe, n_results=20)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索失败: {e}")
 
@@ -76,7 +77,14 @@ async def music_for_reading(req: MusicRequest):
     if not ids:
         raise HTTPException(status_code=404, detail="未找到匹配音乐")
 
-    track_id = int(ids[0])
+    track_id = None
+    for tid in ids:
+        if int(tid) not in req.exclude_ids:
+            track_id = int(tid)
+            break
+
+    if not track_id:
+        track_id = int(ids[0])
     track = music_db.get(app.state.conn, track_id)
     if not track:
         raise HTTPException(status_code=404, detail="曲目不存在")
