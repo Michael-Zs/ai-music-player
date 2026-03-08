@@ -1,4 +1,4 @@
-let book, rendition;
+let book, rendition, bookKey;
 
 document.getElementById('file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -17,6 +17,14 @@ document.getElementById('file-input').addEventListener('change', (e) => {
             allowScriptedContent: true
         });
 
+        book.loaded.metadata.then(meta => {
+            bookKey = `epub-${meta.title || file.name}`;
+            const savedLocation = localStorage.getItem(bookKey);
+            if (savedLocation) {
+                rendition.display(savedLocation);
+            }
+        });
+
         rendition.display().catch(err => {
             console.error('显示失败:', err);
             alert('加载 EPUB 失败，请检查文件格式');
@@ -24,13 +32,8 @@ document.getElementById('file-input').addEventListener('change', (e) => {
 
         rendition.on('relocated', (location) => {
             window.currentLocation = location;
-            localStorage.setItem('epub-location', location.start.cfi);
+            if (bookKey) localStorage.setItem(bookKey, location.start.cfi);
         });
-
-        const savedLocation = localStorage.getItem('epub-location');
-        if (savedLocation) {
-            rendition.display(savedLocation);
-        }
     };
     reader.readAsArrayBuffer(file);
 });
