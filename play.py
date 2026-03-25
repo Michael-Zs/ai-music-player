@@ -13,7 +13,7 @@ import music_db
 load_dotenv()
 
 client = Anthropic(
-    base_url = "https://api.qingyuntop.top/",
+    base_url="https://api.qingyuntop.top/",
     api_key=os.getenv("QINGYUN_API_KEY"),
 )
 
@@ -46,8 +46,8 @@ def play(filepath: str):
 
 def main():
     if len(sys.argv) < 2:
-        print("用法: python play.py \"想听安静的钢琴曲\"")
-        print("选项: python play.py \"查询\" [编号]")
+        print('用法: python play.py "想听安静的钢琴曲"')
+        print('选项: python play.py "查询" [编号]')
         print("  编号: 1-5 播放指定结果，a 全部播放，默认第1首")
         sys.exit(1)
 
@@ -95,6 +95,9 @@ def main():
     # 播放
     if choice == "a":
         for t in tracks:
+            prompt = f"生成一段电台播报，这是接下来播放的音乐:{t.title}, 歌曲风格信息:{t.embedding_text}，大约10-30字"
+            txt = chat(prompt)
+            os.system(f'python3 speech.py "{txt}"')
             play(t.path)
     elif choice.isdigit() and 1 <= int(choice) <= len(tracks):
         play(tracks[int(choice) - 1].path)
