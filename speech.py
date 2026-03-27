@@ -9,6 +9,7 @@ import sys
 model = "speech-2.8-hd"
 file_format = "mp3"
 voice_id = "female-yujie"
+# voice_id = "female-chengshu"
 
 
 class StreamAudioPlayer:
@@ -18,7 +19,14 @@ class StreamAudioPlayer:
     def start_mpv(self):
         """Start MPV player process"""
         try:
-            mpv_command = ["mpv", "--no-cache", "--no-terminal", "--", "fd://0"]
+            mpv_command = [
+                "mpv",
+                "--no-cache",
+                "--no-terminal",
+                "--idle=once",
+                "--",
+                "fd://0",
+            ]
             self.mpv_process = subprocess.Popen(
                 mpv_command,
                 stdin=subprocess.PIPE,
@@ -135,9 +143,10 @@ async def continue_task_with_stream_play(websocket, text, player):
                 #     f.write(audio_data)
                 # print(f"Audio saved as output.{file_format}")
 
-                estimated_duration = total_audio_size * 0.0625 / 1000
-                wait_time = max(estimated_duration + 5, 10)
-                return wait_time
+                # estimated_duration = total_audio_size * 0.0625 / 1000
+                # wait_time = max(estimated_duration + 5, 10)
+                # return wait_time
+                return
 
         except Exception as e:
             print(f"Error: {e}")
@@ -159,7 +168,7 @@ async def close_connection(websocket):
 async def main():
     API_KEY = os.getenv("MINIMAX_API_KEY")
     if len(sys.argv) != 2:
-        print('Usage: python3 speech.py "sth"')
+        print(f'Usage: python3 {sys.argv[0]} "sth"')
         return
     TEXT = sys.argv[1]
 
@@ -177,8 +186,10 @@ async def main():
             print("Task startup failed")
             return
 
-        wait_time = await continue_task_with_stream_play(ws, TEXT, player)
-        await asyncio.sleep(wait_time)
+        # wait_time = await continue_task_with_stream_play(ws, TEXT, player)
+        await continue_task_with_stream_play(ws, TEXT, player)
+        await asyncio.to_thread(player.mpv_process.wait)
+        # await asyncio.sleep(wait_time)
 
     except Exception as e:
         print(f"Error: {e}")
