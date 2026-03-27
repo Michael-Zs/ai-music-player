@@ -12,6 +12,65 @@ file_format = "mp3"
 voice_id = "female-chengshu"
 
 
+async def synthesize_audio(text: str) -> bytes:
+    """将文本合成为音频数据，返回音频字节"""
+    API_KEY = os.getenv("MINIMAX_API_KEY")
+    if not API_KEY:
+        raise ValueError("未配置 MINIMAX_API_KEY")
+
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    url = "wss://api.minimaxi.com/ws/v1/t2a_v2"
+    headers = {"Authorization": f"Bearer {API_KEY}"}
+
+    ws = await websockets.connect(url, additional_headers=headers, ssl=ssl_context)
+    connected = json.loads(await ws.recv())
+    if connected.get("event") != "connected_success":
+        await ws.close()
+        raise ConnectionError("WebSocket 连接失败")
+
+    start_msg = {
+        "event": "task_start",
+        "model": model,
+        "voice_setting": {
+            "voice_id": voice_id,
+            "speed": 1,
+            "vol": 1,
+            "pitch": 0,
+            "english_normalization": False,
+        },
+        "audio_setting": {
+            "sample_rate": 32000,
+            "bitrate": 128000,
+            "format": file_format,
+            "channel": 1,
+        },
+    }
+    await ws.send(json.dumps(start_msg))
+    response = json.loads(await ws.recv())
+    if response.get("event") != "task_started":
+        await ws.close()
+        raise RuntimeError("任务启动失败")
+
+    await ws.send(json.dumps({"event": "task_continue", "text": text}))
+
+    audio_data = b""
+    while True:
+        response = json.loads(await ws.recv())
+        if "data" in response and "audio" in response["data"]:
+            audio = response["data"]["audio"]
+            if audio:
+                audio_data += bytes.fromhex(audio)
+        if response.get("is_final"):
+            break
+
+    await ws.send(json.dumps({"event": "task_finish"}))
+    await ws.close()
+    return audio_data
+
+
 class StreamAudioPlayer:
     def __init__(self):
         self.mpv_process = None

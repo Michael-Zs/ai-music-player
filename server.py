@@ -1,6 +1,8 @@
 """AI 音乐 Web 服务器"""
 import os
 import sqlite3
+import asyncio
+import tempfile
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -12,6 +14,7 @@ from dotenv import load_dotenv
 import music_db
 import embeddingdb
 from play import chat
+from speech import synthesize_audio
 
 load_dotenv()
 
@@ -110,6 +113,48 @@ async def audio(track_id: int):
     }
     media_type = media_types.get(path.suffix.lower(), "audio/mpeg")
     return FileResponse(str(path), media_type=media_type)
+
+
+class TTSRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/tts")
+async def text_to_speech(req: TTSRequest):
+    """将文本转换为语音并返回音频文件"""
+    if not os.getenv("MINIMAX_API_KEY"):
+        raise HTTPException(status_code=500, detail="未配置 MINIMAX_API_KEY")
+
+    try:
+        audio_data = await synthesize_audio(req.text)
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+        temp_file.write(audio_data)
+        temp_file.close()
+        return FileResponse(
+            temp_file.name,
+            media_type="audio/mpeg",
+            filename="announcement.mp3"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"语音合成失败: {e}")
+
+
+@app.get("/api/radio/announce/{track_id}")
+async def get_radio_announce(track_id: int):
+    """生成电台播报文本"""
+    if not os.getenv("QINGYUN_API_KEY"):
+        raise HTTPException(status_code=500, detail="未配置 QINGYUN_API_KEY")
+
+    track = music_db.get(app.state.conn, track_id)
+    if not track:
+        raise HTTPException(status_code=404, detail="曲目不存在")
+
+    try:
+        prompt = f"生成一段电台播报，这是接下来播放的音乐:{track.title}, 歌曲风格信息:{track.embedding_text or '暂无描述'}，大约10-30字，例子：接下来播放的是巴赫的D小调柔板，讲述了xxxx，描绘xxx的感觉"
+        announce_text = chat(prompt)
+        return {"text": announce_text, "title": track.title}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"生成播报失败: {e}")
 
 
 if __name__ == "__main__":
