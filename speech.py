@@ -8,8 +8,8 @@ import sys
 
 model = "speech-2.8-hd"
 file_format = "mp3"
-voice_id = "female-yujie"
-# voice_id = "female-chengshu"
+# voice_id = "female-yujie"
+voice_id = "female-chengshu"
 
 
 class StreamAudioPlayer:

@@ -95,8 +95,9 @@ def main():
     # 播放
     if choice == "a":
         for t in tracks:
-            prompt = f"生成一段电台播报，这是接下来播放的音乐:{t.title}, 歌曲风格信息:{t.embedding_text}，大约10-30字"
+            prompt = f"生成一段电台播报，这是接下来播放的音乐:{t.title}, 歌曲风格信息:{t.embedding_text}，大约10-30字，例子：接下来播放的是巴赫的D小调柔板，讲述了xxxx，描绘xxx的感觉"
             txt = chat(prompt)
+            print(txt)
             os.system(f'python3 speech.py "{txt}"')
             play(t.path)
     elif choice.isdigit() and 1 <= int(choice) <= len(tracks):
