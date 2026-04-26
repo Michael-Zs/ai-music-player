@@ -1,0 +1,38 @@
+digraph Search_Pipeline {
+    rankdir=LR;
+    bgcolor="transparent";
+    node [shape=box, style="rounded,filled", fontname="Noto Sans CJK SC,SimHei,Helvetica", fontsize=11, margin=0.2];
+    edge [fontname="Noto Sans CJK SC,SimHei,Helvetica", fontsize=9];
+
+    labelloc="t";
+    label="语义检索管线 — 四阶段流程";
+    fontsize=16; fontname="Noto Sans CJK SC,SimHei,Helvetica-Bold";
+
+    // Input
+    input [label="用户输入\n\"深夜想听忧伤的音乐\"", fillcolor="#dfe6e9"];
+
+    // Step 1
+    step1 [label="① LLM 查询改写\n(Claude Sonnet)\n\n提取情绪/氛围/风格\n生成比喻和场景描写", fillcolor="#a29bfe", fontcolor="white"];
+
+    rewritten [label="语义文本\n\"深沉的忧伤弥漫在寂静的\n夜晚，钢琴低吟浅唱...\"", fillcolor="#dfe6e9", shape="note"];
+
+    // Step 2
+    step2 [label="② 文本向量化\n(Embedding-V1)\n\n1536 维向量", fillcolor="#00cec9", fontcolor="white"];
+
+    // Step 3
+    step3 [label="③ 向量相似度搜索\n(ChromaDB ANN)\n\nTop-N×3 候选召回", fillcolor="#74b9ff"];
+
+    // Step 4
+    step4 [label="④ Rerank 精排\n(qwen3-rerank)\n\n语义相关性重排序", fillcolor="#fd79a8", fontcolor="white"];
+
+    // Output
+    result [label="Top-N 结果\n1. 肖邦 — 夜曲\n2. 德彪西 — 月光\n3. 萨蒂 — 裸体舞曲", fillcolor="#00b894", fontcolor="white"];
+
+    // Edges
+    input -> step1;
+    step1 -> rewritten;
+    rewritten -> step2;
+    step2 -> step3 [label="查询向量"];
+    step3 -> step4 [label="候选集"];
+    step4 -> result;
+}

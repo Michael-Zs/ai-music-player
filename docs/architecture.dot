@@ -1,0 +1,87 @@
+digraph AI_Music {
+    rankdir=LR;
+    bgcolor="transparent";
+    node [shape=box, style="rounded,filled", fontname="Noto Sans CJK SC,SimHei,Helvetica", fontsize=11, margin=0.2];
+    edge [fontname="Noto Sans CJK SC,SimHei,Helvetica", fontsize=9];
+
+    labelloc="t";
+    label="AI Music — 智能音乐检索系统架构";
+    fontsize=16; fontname="Noto Sans CJK SC,SimHei,Helvetica-Bold";
+
+    // Input
+    music_dir [label="本地音乐文件\nmp3/flac/ogg/...", fillcolor="#dfe6e9"];
+
+    // Ingestion
+    subgraph cluster_ingest {
+        label="数据采集";
+        style=filled; color="#74b9ff"; fillcolor="#f0f7ff";
+        margin=15;
+
+        scan [label="scan_music.py\nmutagen 元数据提取", fillcolor="#74b9ff"];
+        sqlite [label="SQLite\nmusic.db", fillcolor="#55efc4", shape=cylinder];
+    }
+
+    // AI Agent
+    subgraph cluster_agent {
+        label="Claude AI Agent (CLI + Web Search)";
+        style=filled; color="#a29bfe"; fillcolor="#f5f0ff";
+        margin=15;
+
+        claude [label="Claude LLM\n(描述生成)", fillcolor="#a29bfe", fontcolor="white", width=2.2];
+        web_search [label="web_search()\n网络搜索", fillcolor="#fdcb6e", shape=component];
+    }
+
+    // Embedding
+    subgraph cluster_embed {
+        label="向量化 & 存储";
+        style=filled; color="#00cec9"; fillcolor="#f0fffa";
+        margin=15;
+
+        embed_api [label="Embedding API\n(Embedding-V1)", fillcolor="#00cec9", fontcolor="white"];
+        chromadb [label="ChromaDB\n向量数据库", fillcolor="#55efc4", shape=cylinder];
+    }
+
+    // Query
+    subgraph cluster_query {
+        label="语义检索管线";
+        style=filled; color="#fd79a8"; fillcolor="#fff0f6";
+        margin=15;
+
+        llm_rewrite [label="LLM\n查询改写", fillcolor="#fd79a8", fontcolor="white"];
+        vector_search [label="向量搜索\n(ANN 召回)", fillcolor="#fdcb6e"];
+        rerank [label="Rerank\n(qwen3-rerank)", fillcolor="#fdcb6e", shape=component];
+    }
+
+    // Output
+    subgraph cluster_output {
+        label="输出 & 播放";
+        style=filled; color="#00b894"; fillcolor="#f0fff7";
+        margin=15;
+
+        server [label="FastAPI Server\nREST + 音频流", fillcolor="#00b894", fontcolor="white"];
+        tts [label="MiniMax TTS\nWebSocket 流式", fillcolor="#fdcb6e", shape=component];
+        play [label="ffplay\n音频播放", fillcolor="#74b9ff"];
+    }
+
+    // Edges
+    music_dir -> scan;
+    scan -> sqlite;
+    sqlite -> claude [label="元数据"];
+    claude -> web_search [label="工具调用", color="#636e72"];
+    web_search -> claude [label="搜索结果", color="#636e72"];
+    claude -> sqlite [label="写回描述"];
+    sqlite -> embed_api [label="描述文本"];
+    embed_api -> chromadb [label="向量 upsert"];
+
+    user [label="用户\n自然语言查询", fillcolor="#dfe6e9"];
+    user -> llm_rewrite [label="\"安静的钢琴曲\""];
+    llm_rewrite -> vector_search [label="语义文本"];
+    vector_search -> chromadb [label="ANN 查询", style=dashed];
+    vector_search -> rerank [label="候选集"];
+    rerank -> vector_search [label="精排结果", color="#636e72"];
+
+    vector_search -> server;
+    vector_search -> play [label="CLI"];
+    server -> tts [label="电台模式"];
+    tts -> play;
+}
